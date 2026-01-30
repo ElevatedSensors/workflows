@@ -24,7 +24,7 @@ jobs:
 ```
 
 ### firmware-nightly.yml
-Build ESPHome firmware, push files to `nightly` release.
+Build ESPHome firmware, push files to persistent `nightly` release.
 ```
 name: Nightly
 
