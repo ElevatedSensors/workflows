@@ -13,7 +13,7 @@ jobs:
     uses: esphome/workflows/.github/workflows/build.yml@2025.10.0
     with:
       files: |
-        ${{ inputs.product-name }}.factory.yaml
+        ${{ inputs.product-name }}.nightly.yaml
       esphome-version: stable
       combined-name: ${{ inputs.product-name }}
 
