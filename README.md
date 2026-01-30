@@ -7,7 +7,7 @@ Build ESPHome firmware, push files to release, push files to [docs repo](https:/
 ```
 name: Release
 
-on
+on:
   release:
     types: [released]
 
