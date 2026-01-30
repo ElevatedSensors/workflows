@@ -18,7 +18,7 @@ jobs:
       combined-name: ${{ inputs.product-name }}
 
       release-summary: Nightly automated build for ${{ inputs.product-name }}
-      release-url: https://github.com/ElevatedSensors/bed-presence-mk1/releases/tag/nightly
+      release-url: https://github.com/ElevatedSensors/${{ inputs.product-name }}/releases/tag/nightly
       release-version: nightly
 
   upload-to-release:
