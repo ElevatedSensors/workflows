@@ -11,7 +11,7 @@ on:
         type: string # "release" or "nightly"
     secrets:
       DOCS_REPO_TOKEN:
-        required: false # only required for release build
+        required: true
 
 jobs:
   get-release-summary:
@@ -23,13 +23,17 @@ jobs:
     steps:
       - id: get-summary
         run: |
-          BODY=$(cat << 'EOF'
-          ${{ github.event.release.body }}
-          EOF
-          )
-          # head gets the first line, tr removes carriage return
-          FIRST_LINE=$(echo "$BODY" | head -n 1 | tr -d '\r')
-          echo "release-summary=$FIRST_LINE" >> $GITHUB_OUTPUT
+          if [ "${{ inputs.build-type  }}" = "release" ]; then
+            BODY=$(cat << 'EOF'
+            ${{ github.event.release.body }}
+            EOF
+            )
+            # head gets the first line, tr removes carriage return
+            FIRST_LINE=$(echo "$BODY" | head -n 1 | tr -d '\r')
+            echo "release-summary=$FIRST_LINE" >> $GITHUB_OUTPUT
+          else
+            echo "release-summary=Nightly automated build for ${{ inputs.product-name }}" >> $GITHUB_OUTPUT
+          fi
 
   build-firmware:
     name: Build Firmware
@@ -37,13 +41,11 @@ jobs:
     uses: esphome/workflows/.github/workflows/build.yml@2025.10.0
     with:
       files: |
-        ${{ inputs.produc-name }}.${{ inputs.build-type == 'release' && 'factory' || 'nightly' }}.yaml
+        ${{ inputs.product-name }}.${{ inputs.build-type == 'release' && 'factory' || 'nightly' }}.yaml
       esphome-version: stable
       combined-name: ${{ inputs.product-name }}
 
-      release-summary: ${{ inputs.build-type == 'release'
-        && needs.get-release-summary.outputs.release-summary
-        || format('Nightly automated build for {0}', inputs.product-name) }}
+      release-summary: ${{ needs.get-release-summary.outputs.release-summary }}
 
       release-url: ${{ inputs.build-type == 'release'
         && github.event.release.html_url
