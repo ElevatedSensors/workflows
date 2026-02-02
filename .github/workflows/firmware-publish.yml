@@ -61,7 +61,6 @@ jobs:
       version: ${{ inputs.build-type == 'release'
         && github.event.release.tag_name
         || 'nightly' }}
-      version: ${{ github.event.release.tag_name }}
 
   push-to-docs:
     name: Push Latest Firmware to Docs Repo
