@@ -47,7 +47,7 @@ jobs:
 
       release-url: ${{ inputs.build-type == 'release'
         && github.event.release.html_url
-        || format('https://github.com/ElevatedSensors/{0}/releases/tag/nightly', inputs.product-name)
+        || format('https://github.com/ElevatedSensors/{0}/releases/tag/nightly', inputs.product-name) }}
 
       release-version: ${{ inputs.build-type == 'release'
         && github.event.release.tag_name
