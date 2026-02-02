@@ -125,7 +125,7 @@ jobs:
 
   update-release-info:
     name: Update Release Info
-    if: intpus.build-type == 'nightly'
+    if: inputs.build-type == 'nightly'
     needs: upload-to-release
     runs-on: ubuntu-latest
     permissions:
