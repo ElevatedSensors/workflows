@@ -23,12 +23,8 @@ jobs:
       - id: get-summary
         run: |
           if [ "${{ inputs.build-type  }}" = "release" ]; then
-            BODY=$(cat << 'EOF'
-            ${{ github.event.release.body }}
-            EOF
-            )
             # head gets the first line, tr removes carriage return
-            FIRST_LINE=$(echo "$BODY" | head -n 1 | tr -d '\r')
+            FIRST_LINE=$(echo "${{ github.event.release.body  }}" | head -n 1 | tr -d '\r')
             echo "release-summary=$FIRST_LINE" >> $GITHUB_OUTPUT
           else
             echo "release-summary=Nightly automated build for ${{ inputs.product-name }}" >> $GITHUB_OUTPUT
