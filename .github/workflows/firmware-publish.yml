@@ -16,7 +16,6 @@ on:
 jobs:
   get-release-summary:
     name: Get Release Summary
-    if: inputs.build-type == 'release'
     runs-on: ubuntu-latest
     outputs:
       release-summary: ${{ steps.get-summary.outputs.release-summary }}
