@@ -11,7 +11,7 @@ on:
         type: string # "release" or "nightly"
     secrets:
       DOCS_REPO_TOKEN:
-        required: true
+        required: false # only required for release build
 
 jobs:
   get-release-summary:
