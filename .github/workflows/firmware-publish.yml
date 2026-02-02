@@ -142,7 +142,7 @@ jobs:
       - name: Update Release Description
         run: |
           # Generate metadata
-          BUILD_TIME=$(TZ=America/Denver data +"%Y-%m-%d %H:%M %Z")
+          BUILD_TIME=$(TZ=America/Denver date +"%Y-%m-%d %H:%M %Z")
           COMMIT_SHA="${{ github.sha }}"
 
           # Create a prominent warning and info body
