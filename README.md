@@ -3,9 +3,12 @@ This repository contains reusable GitHub Action workflows for use in other Eleva
 
 ## Available Workflows
 ### firmware-publish.yml
-Build ESPHome firmware, push files to release, push files to [docs repo](https://github.com/ElevatedSensors/docs).
+- Build ESPHome firmware
+- Build Hubitat Bundle
+- Upload files to release (release tag name, or "nightly")
+- Upload files to [docs repo](https://github.com/ElevatedSensors/docs) (build-type = "release" only)
 ```
-name: Release
+name: Formal Release Example
 
 on:
   release:
@@ -19,14 +22,12 @@ jobs:
     uses: ElevatedSensors/workflows/.github/workflows/publish-firmware.yml@main
     with:
       product-name: "bed-presence-mk1"
+      build-type: "release"
     secrets:
       DOCS_REPO_TOKEN: ${{ secrets.DOCS_REPO_TOKEN }}
 ```
-
-### firmware-nightly.yml
-Build ESPHome firmware, push files to persistent `nightly` release.
 ```
-name: Nightly
+name: Nightly Build Example
 
 on:
   push:
@@ -39,7 +40,11 @@ jobs:
   nightly:
     permissions:
       contents: write
-    uses: ElevatedSensors/workflows/.github/workflows/firmware-nightly.yml@main
+      pull-requests: write
+    uses: ElevatedSensors/workflows/.github/workflows/publish-firmware.yml@main
     with:
       product-name: "bed-presence-mk1"
+      build-type: "nightly"
+    secrets:
+      DOCS_REPO_TOKEN: ${{ secrets.DOCS_REPO_TOKEN }}
 ```
