@@ -50,8 +50,8 @@ jobs:
         && github.event.release.tag_name
         || 'nightly' }}
 
-  upload-to-release:
-    name: Upload to Release
+  upload-fw-to-release:
+    name: Upload Firmware to Release
     needs: build-firmware
     uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2025.10.0
     with:
@@ -62,7 +62,7 @@ jobs:
   push-to-docs:
     name: Push Latest Firmware to Docs Repo
     if: inputs.build-type == 'release'
-    needs: upload-to-release
+    needs: upload-fw-to-release
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -134,14 +134,16 @@ jobs:
 
           FILES="integrations/hubitat"
           PASCAL_NAME=$(echo "${{ inputs.product-name }}" | sed -r 's/(^|-)([a-z0-9])/\U\2/g')
+          DRIVER_OUT="$BUNDLE_DIR/elevated_sensors.$PASCAL_NAME.groovy"
+          VERSION="${{ inputs.build-type == 'release' && github.event.release.tag_name || 'nightly' }}"
+
           cp "$FILES/bundles/${{ inputs.product-name }}.txt" "$BUNDLE_DIR/install.txt"
           cp "$FILES/bundles/${{ inputs.product-name }}.txt" "$BUNDLE_DIR/update.txt"
-          cp "$FILES/drivers/${{ inputs.product-name }}.groovy" "$BUNDLE_DIR/elevated_sensors.$PASCAL_NAME.groovy"
-          wget -O "$BUNDLE_DIR/esphome.espHomeApiHelper.groovy" "https://raw.githubusercontent.com/ElevatedSensors/hubitat-espHomeApiHelper/refs/heads/main/ESPHome/ESPHome-API-Library.groovy"
+          cp "$FILES/drivers/${{ inputs.product-name }}.groovy" "$DRIVER_OUT"
+          sed -i "s/DRIVER_VERSION = \"dev\"/DRIVER_VERSION = \"$VERSION\"/g" "$DRIVER_OUT"
+          wget -O "$BUNDLE_DIR/esphome.espHomeApiHelper.groovy" "https://raw.githubusercontent.com/bradsjm/hubitat-public/main/ESPHome/ESPHome-API-Library.groovy"
 
           zip -r "${{ inputs.product-name }}-hubitat-bundle.zip" "$BUNDLE_DIR"
-
-          VERSION="${{ inputs.build-type == 'release' && github.event.release.tag_name || 'nightly' }}"
 
           gh release upload "$VERSION" \
             "${{ inputs.product-name  }}-hubitat-bundle.zip" \
@@ -153,7 +155,7 @@ jobs:
   update-release-info:
     name: Update Release Info
     if: inputs.build-type == 'nightly'
-    needs: upload-to-release
+    needs: [upload-fw-to-release, hubitat-bundle]
     runs-on: ubuntu-latest
     permissions:
       contents: write
