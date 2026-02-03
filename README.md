@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: ElevatedSensors/workflows/.github/workflows/publish-firmware.yml@main
+    uses: ElevatedSensors/workflows/.github/workflows/publish-firmware.yml@v1
     with:
       product-name: "bed-presence-mk1"
       build-type: "release"
@@ -33,7 +33,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '0 0 * * *'   # run every day at 00:00
+    - cron: '0 7 * * *'   # run every day at 07:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: ElevatedSensors/workflows/.github/workflows/publish-firmware.yml@main
+    uses: ElevatedSensors/workflows/.github/workflows/publish-firmware.yml@v1
     with:
       product-name: "bed-presence-mk1"
       build-type: "nightly"
