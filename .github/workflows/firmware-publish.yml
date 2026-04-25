@@ -48,7 +48,7 @@ jobs:
 
       release-version: ${{ inputs.build-type == 'release'
         && github.event.release.tag_name
-        || 'nightly' }}
+        || format('nightly.{0}', github.run_number) }}
 
   upload-fw-to-release:
     name: Upload Firmware to Release
