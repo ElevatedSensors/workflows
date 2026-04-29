@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release-summary: ${{ steps.get-summary.outputs.release-summary }}
-      nightly-version: ${{ steps.get-summary.outputs.nightly-version }}
     steps:
       - id: get-summary
         run: |
@@ -29,8 +28,6 @@ jobs:
             echo "release-summary=$FIRST_LINE" >> $GITHUB_OUTPUT
           else
             echo "release-summary=Nightly automated build for ${{ inputs.product-name }}" >> $GITHUB_OUTPUT
-            NIGHTLY_VERSION="$(TZ=America/Denver date +'%Y.%m.%d.%H%M')"
-            echo "nightly-version=nightly-$NIGHTLY_VERSION" >> $GITHUB_OUTPUT
           fi
 
   build-firmware:
@@ -49,14 +46,13 @@ jobs:
         && github.event.release.html_url
         || format('https://github.com/ElevatedSensors/{0}/releases/tag/nightly', inputs.product-name) }}
 
-      release-version: ${{ inputs.build-type == 'release'
-        && github.event.release.tag_name
-        || needs.get-release-summary.outputs.nightly-version }}
+      # Use release name for formal builds, if empty version is dev-$(date +'%Y%m%d-%H%M')
+      release-version: ${{ inputs.build-type == 'release' && github.event.release.tag_name || '' }}
   
   update-nightly-version-info:
     name: Rename Nightly Artifact
     if: inputs.build-type == 'nightly'
-    needs: [build-firmware, get-release-summary]
+    needs: [build-firmware]
     runs-on: ubuntu-latest
     steps:
       - name: Download firmware artifact
@@ -67,7 +63,7 @@ jobs:
 
       - name: Rename firmware artifact
         run: |
-          SRC="firmware-artifact/${{ needs.get-release-summary.outputs.nightly-version }}"
+          SRC="firmware-artifact/${{ needs.build-firmware.outputs.version }}"
           DST="firmware-artifact/nightly"
 
           if [ -d "$SRC" ]; then
