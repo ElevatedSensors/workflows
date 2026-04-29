@@ -52,7 +52,7 @@ jobs:
   update-nightly-version-info:
     name: Rename Nightly Artifact
     if: inputs.build-type == 'nightly'
-    needs: [build-firmware]
+    needs: build-firmware
     runs-on: ubuntu-latest
     steps:
       - name: Download firmware artifact
@@ -74,7 +74,7 @@ jobs:
             exit 1
           fi
 
-      - name: Upload patched firmware artifact
+      - name: Upload renamed firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.product-name }}
@@ -158,6 +158,7 @@ jobs:
 
   hubitat-bundle:
     name: Hubitat Bundle
+    needs: build-firmware
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -171,7 +172,7 @@ jobs:
           FILES="integrations/hubitat"
           PASCAL_NAME=$(echo "${{ inputs.product-name }}" | sed -r 's/(^|-)([a-z0-9])/\U\2/g')
           DRIVER_OUT="$BUNDLE_DIR/elevated_sensors.$PASCAL_NAME.groovy"
-          VERSION="${{ inputs.build-type == 'release' && github.event.release.tag_name || 'nightly' }}"
+          VERSION="${{ needs.build-firmware.outputs.version }}"
 
           cp "$FILES/bundles/${{ inputs.product-name }}.txt" "$BUNDLE_DIR/install.txt"
           cp "$FILES/bundles/${{ inputs.product-name }}.txt" "$BUNDLE_DIR/update.txt"
