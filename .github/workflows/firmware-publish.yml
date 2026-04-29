@@ -173,6 +173,7 @@ jobs:
           PASCAL_NAME=$(echo "${{ inputs.product-name }}" | sed -r 's/(^|-)([a-z0-9])/\U\2/g')
           DRIVER_OUT="$BUNDLE_DIR/elevated_sensors.$PASCAL_NAME.groovy"
           VERSION="${{ needs.build-firmware.outputs.version }}"
+          RELEASE_VERSION="${{ inputs.build-type == 'release' && github.event.release.tag_name || 'nightly' }}"
 
           cp "$FILES/bundles/${{ inputs.product-name }}.txt" "$BUNDLE_DIR/install.txt"
           cp "$FILES/bundles/${{ inputs.product-name }}.txt" "$BUNDLE_DIR/update.txt"
@@ -182,7 +183,7 @@ jobs:
 
           zip -r "${{ inputs.product-name }}-hubitat-bundle.zip" "$BUNDLE_DIR"
 
-          gh release upload "$VERSION" \
+          gh release upload "$RELEASE_VERSION" \
             "${{ inputs.product-name  }}-hubitat-bundle.zip" \
             "$BUNDLE_DIR/elevated_sensors.$PASCAL_NAME.groovy" \
             --clobber
