@@ -175,8 +175,17 @@ jobs:
       - name: Update manifest version
         run: |
           NIGHTLY_VERSION="$(date -u +'%Y.%m.%d.%H%M')"
-          sed -E -i "s/\"version\": \"[^\"]+\"/\"version\": \"$NIGHTLY_VERSION\"/" firmware-download/manifest.json
-          echo "Updated nightly manifest version to $NIGHTLY_VERSION"
+          MANIFEST_PATH="firmware-download/${{ inputs.product-name }}.manifest.json"
+
+          if [ ! -f "$MANIFEST_PATH" ]; then
+            echo "Expected manifest not found: $MANIFEST_PATH"
+            echo "Available files:"
+            ls -la firmware-download
+            exit 1
+          fi
+
+          sed -E -i "s/\"version\": \"[^\"]+\"/\"version\": \"$NIGHTLY_VERSION\"/" "$MANIFEST_PATH"
+          echo "Updated nightly manifest version to $NIGHTLY_VERSION in $MANIFEST_PATH"
 
       - name: Upload updated nightly assets
         run: |
@@ -216,7 +225,7 @@ jobs:
         uses: actions/deploy-pages@v5
 
   update-nightly-release-info:
-    name: Update Release Info
+    name: Update Nightly Release Info
     if: inputs.build-type == 'nightly'
     needs: [update-nightly-version-info, hubitat-bundle]
     runs-on: ubuntu-latest
