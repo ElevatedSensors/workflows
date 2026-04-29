@@ -225,7 +225,7 @@ jobs:
   update-nightly-release-info:
     name: Update Nightly Release Info
     if: inputs.build-type == 'nightly'
-    needs: [upload-fw-to-release, hubitat-bundle]
+    needs: [build-firmware, upload-fw-to-release, hubitat-bundle]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -246,6 +246,8 @@ jobs:
           # Generate metadata
           BUILD_TIME=$(TZ=America/Denver date +"%Y-%m-%d %H:%M %Z")
           COMMIT_SHA="${{ github.sha }}"
+          MANIFEST_VERSION="${{ needs.build-firmware.outputs.version }}"
+          MANIFEST_LINK="https://elevatedsensors.github.io/${{ inputs.product-name }}/${{ inputs.product-name }}.manifest.json"
 
           # Create a prominent warning and info body
           RELEASE_BODY=$(cat <<EOF
@@ -255,6 +257,8 @@ jobs:
           - **Last Updated:** $BUILD_TIME
           - **Commit:** [$COMMIT_SHA](https://github.com/${{ github.repository }}/commit/$COMMIT_SHA)
           - **Stability:** Experimental/May contain bugs
+          - **Manifest:** [$MANIFEST_VERSION]($MANIFEST_LINK)
+
           > [!IMPORTANT]
           > Files here are replaced every night and on every push to main
           EOF
