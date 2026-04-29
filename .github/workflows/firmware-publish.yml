@@ -49,7 +49,6 @@ jobs:
       release-version: ${{ inputs.build-type == 'release'
         && github.event.release.tag_name
         || 'nightly' }}
-        #|| format('nightly.{0}', github.run_number) }}
 
   upload-fw-to-release:
     name: Upload Firmware to Release
@@ -60,39 +59,8 @@ jobs:
         && github.event.release.tag_name
         || 'nightly' }}
 
-  push-nightly-to-gh-pages:
-    name: Push Latest Firmware to Docs Repo
-    if: inputs.build-type == 'nightly'
-    needs: upload-fw-to-release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    steps:
-      - name: Download nightly release assets
-        run: |
-          mkdir -p firmware-download
-          gh release download nightly \
-            --repo ${{ github.repository }} \
-            --dir firmware-download \
-            --clobber
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload firmware
-          path: './firmware-download'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
-
   push-release-to-docs-repo:
-    name: Push Latest Firmware to Docs Repo
+    name: Push Released Firmware to Docs Repo
     if: inputs.build-type == 'release'
     needs: upload-fw-to-release
     runs-on: ubuntu-latest
@@ -185,10 +153,72 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  update-release-info:
+  ## NIGHTLY BUILD ONLY ##
+  update-nightly-version-info:
+    name: Update Nightly Version Info
+    if: inputs.build-type == 'nightly'
+    needs: upload-fw-to-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download nightly release assets
+        run: |
+          mkdir -p firmware-download
+          gh release download nightly \
+            --repo ${{ github.repository }} \
+            --dir firmware-download \
+            --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update manifest version
+        run: |
+          NIGHTLY_VERSION="$(date -u +'%Y.%m.%d.%H%M')"
+          sed -E -i "s/\"version\": \"[^\"]+\"/\"version\": \"$NIGHTLY_VERSION\"/" firmware-download/manifest.json
+          echo "Updated nightly manifest version to $NIGHTLY_VERSION"
+
+      - name: Upload updated nightly assets
+        run: |
+          gh release upload nightly firmware-download/* --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  push-nightly-to-gh-pages:
+    name: Push Nightly Firmware to GH Pages
+    if: inputs.build-type == 'nightly'
+    needs: update-nightly-version-info
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Download nightly release assets
+        run: |
+          mkdir -p firmware-download
+          gh release download nightly \
+            --repo ${{ github.repository }} \
+            --dir firmware-download \
+            --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload firmware
+          path: './firmware-download'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  update-nightly-release-info:
     name: Update Release Info
     if: inputs.build-type == 'nightly'
-    needs: [upload-fw-to-release, hubitat-bundle]
+    needs: [update-nightly-version-info, hubitat-bundle]
     runs-on: ubuntu-latest
     permissions:
       contents: write
