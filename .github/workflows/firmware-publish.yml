@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release-summary: ${{ steps.get-summary.outputs.release-summary }}
+      nightly-version: ${{ steps.get-summary.outputs.nightly-version }}
     steps:
       - id: get-summary
         run: |
@@ -28,6 +29,8 @@ jobs:
             echo "release-summary=$FIRST_LINE" >> $GITHUB_OUTPUT
           else
             echo "release-summary=Nightly automated build for ${{ inputs.product-name }}" >> $GITHUB_OUTPUT
+            NIGHTLY_VERSION="$(TZ=America/Denver date +'%Y.%m.%d.%H%M')"
+            echo "nightly-version=nightly-$NIGHTLY_VERSION" >> $GITHUB_OUTPUT
           fi
 
   build-firmware:
@@ -48,20 +51,57 @@ jobs:
 
       release-version: ${{ inputs.build-type == 'release'
         && github.event.release.tag_name
-        || 'nightly' }}
+        || needs.get-release-summary.outputs.nightly-version }}
+  
+  update-nightly-version-info:
+    name: Rename Nightly Artifact
+    if: inputs.build-type == 'nightly'
+    needs: [build-firmware, get-release-summary]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.product-name }}
+          path: firmware-artifact
 
-  upload-release-fw-to-release:
-    name: Upload Release Firmware to Release
-    if: inputs.build-type == 'release'
-    needs: build-firmware
+      - name: Rename firmware artifact
+        run: |
+          SRC="firmware-artifact/${{ needs.get-release-summary.outputs.nightly-version }}"
+          DST="firmware-artifact/nightly"
+
+          if [ -d "$SRC" ]; then
+            mv "$SRC" "$DST"
+          else
+            echo "Expected folder not found: $SRC"
+            tree firmware-artifact
+            exit 1
+          fi
+
+      - name: Upload patched firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.product-name }}
+          path: firmware-artifact
+          overwrite: true
+
+  upload-fw-to-release:
+    name: Upload Firmware to Release
+    needs: [get-release-summary, build-firmware, update-nightly-version-info]
+    if: |
+      always() &&
+      needs.build-firmware.result == 'success' &&
+      (needs.update-nightly-version-info.result == 'success' || needs.update-nightly-version-info.result == 'skipped')
     uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.4.0
     with:
-      version: ${{ github.event.release.tag_name }}
+      version: ${{ inputs.build-type == 'release'
+        && github.event.release.tag_name
+        || 'nightly' }}
 
   push-release-to-docs-repo:
     name: Push Released Firmware to Docs Repo
     if: inputs.build-type == 'release'
-    needs: upload-release-fw-to-release
+    needs: upload-fw-to-release
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -153,52 +193,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   ## NIGHTLY BUILD ONLY ##
-  update-nightly-version-info:
-    name: Update Nightly Version Info
-    if: inputs.build-type == 'nightly'
-    needs: build-firmware
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download firmware artifact
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ inputs.product-name }}
-          path: firmware-artifact
-
-      - name: Update nightly manifest version
-        run: |
-          NIGHTLY_VERSION="$(TZ=America/Denver date +'%Y.%m.%d.%H%M')"
-          MANIFEST_PATH="firmware-artifact/nightly/${{ inputs.product-name }}.manifest.json"
-
-          if [ ! -f "$MANIFEST_PATH" ]; then
-            echo "Expected manifest not found: $MANIFEST_PATH"
-            echo "Available files:"
-            tree .
-            exit 1
-          fi
-
-          sed -E -i "s/\"version\": \"[^\"]+\"/\"version\": \"$NIGHTLY_VERSION\"/" "$MANIFEST_PATH"
-          echo "Updated nightly manifest version to $NIGHTLY_VERSION in $MANIFEST_PATH"
-
-      - name: Upload patched firmware artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.product-name }}
-          path: firmware-artifact
-          overwrite: true
-
-  upload-nightly-fw-to-release:
-    name: Upload Nightly Firmware to Release
-    if: inputs.build-type == 'nightly'
-    needs: update-nightly-version-info
-    uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.4.0
-    with:
-      version: nightly
-
   push-nightly-to-gh-pages:
     name: Push Nightly Firmware to GH Pages
     if: inputs.build-type == 'nightly'
-    needs: upload-nightly-fw-to-release
+    needs: upload-fw-to-release
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -229,7 +227,7 @@ jobs:
   update-nightly-release-info:
     name: Update Nightly Release Info
     if: inputs.build-type == 'nightly'
-    needs: [upload-nightly-fw-to-release, hubitat-bundle]
+    needs: [upload-fw-to-release, hubitat-bundle]
     runs-on: ubuntu-latest
     permissions:
       contents: write
