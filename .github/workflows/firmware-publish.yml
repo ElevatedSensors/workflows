@@ -83,7 +83,7 @@ jobs:
 
   upload-fw-to-release:
     name: Upload Firmware to Release
-    needs: [get-release-summary, build-firmware, update-nightly-version-info]
+    needs: [build-firmware, update-nightly-version-info]
     if: |
       always() &&
       needs.build-firmware.result == 'success' &&
