@@ -60,12 +60,44 @@ jobs:
         && github.event.release.tag_name
         || 'nightly' }}
 
-  push-to-docs:
+  push-nightly-to-gh-pages:
+    name: Push Latest Firmware to Docs Repo
+    if: inputs.build-type == 'nightly'
+    needs: upload-fw-to-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Download nightly release assets
+        run: |
+          mkdir -p firmware-download
+          gh release download nightly \
+            --repo ${{ github.repository }} \
+            --dir firmware-download \
+            --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload firmware
+          path: './firmware-download'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  push-release-to-docs-repo:
     name: Push Latest Firmware to Docs Repo
     if: inputs.build-type == 'release'
     needs: upload-fw-to-release
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - name: Download release assets
