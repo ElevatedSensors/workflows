@@ -50,19 +50,61 @@ jobs:
         && github.event.release.tag_name
         || 'nightly' }}
 
-  upload-fw-to-release:
-    name: Upload Firmware to Release
+  ## NIGHTLY BUILD ONLY ##
+  update-nightly-version-info:
+    name: Update Nightly Build Artifact Version Info
+    if: inputs.build-type == 'nightly'
+    needs: build-firmware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.product-name }}
+          path: firmware-artifact
+
+      - name: Update nightly manifest version
+        run: |
+          NIGHTLY_VERSION="$(TZ=America/Denver date +'%Y.%m.%d.%H%M')"
+          MANIFEST_PATH="firmware-artifact/${{ inputs.product-name }}.manifest.json"
+
+          if [ ! -f "$MANIFEST_PATH" ]; then
+            echo "Expected manifest not found: $MANIFEST_PATH"
+            echo "Available files:"
+            ls -la firmware-artifact
+            exit 1
+          fi
+
+          sed -E -i "s/\"version\": \"[^\"]+\"/\"version\": \"$NIGHTLY_VERSION\"/" "$MANIFEST_PATH"
+          echo "Updated nightly manifest version to $NIGHTLY_VERSION in $MANIFEST_PATH"
+
+      - name: Upload patched firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.product-name }}
+          path: firmware-artifact/*
+          overwrite: true
+
+  upload-nightly-fw-to-release:
+    name: Upload Nightly Firmware to Release
+    if: inputs.build-type == 'nightly'
+    needs: update-nightly-version-info
+    uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.4.0
+    with:
+      version: nightly
+
+  upload-release-fw-to-release:
+    name: Upload Release Firmware to Release
+    if: inputs.build-type == 'release'
     needs: build-firmware
     uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.4.0
     with:
-      version: ${{ inputs.build-type == 'release'
-        && github.event.release.tag_name
-        || 'nightly' }}
+      version: ${{ github.event.release.tag_name }}
 
   push-release-to-docs-repo:
     name: Push Released Firmware to Docs Repo
     if: inputs.build-type == 'release'
-    needs: upload-fw-to-release
+    needs: upload-release-fw-to-release
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -153,50 +195,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  ## NIGHTLY BUILD ONLY ##
-  update-nightly-version-info:
-    name: Update Nightly Version Info
-    if: inputs.build-type == 'nightly'
-    needs: upload-fw-to-release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download nightly release assets
-        run: |
-          mkdir -p firmware-download
-          gh release download nightly \
-            --repo ${{ github.repository }} \
-            --dir firmware-download \
-            --clobber
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Update manifest version
-        run: |
-          NIGHTLY_VERSION="$(TZ=America/Denver date +'%Y.%m.%d.%H%M')"
-          MANIFEST_PATH="firmware-download/${{ inputs.product-name }}.manifest.json"
-
-          if [ ! -f "$MANIFEST_PATH" ]; then
-            echo "Expected manifest not found: $MANIFEST_PATH"
-            echo "Available files:"
-            ls -la firmware-download
-            exit 1
-          fi
-
-          sed -E -i "s/\"version\": \"[^\"]+\"/\"version\": \"$NIGHTLY_VERSION\"/" "$MANIFEST_PATH"
-          echo "Updated nightly manifest version to $NIGHTLY_VERSION in $MANIFEST_PATH"
-
-      - name: Upload updated nightly assets
-        run: |
-          gh release upload nightly firmware-download/* --clobber
-        env:
-          GH_TOKEN: ${{ github.token }}
-
   push-nightly-to-gh-pages:
     name: Push Nightly Firmware to GH Pages
     if: inputs.build-type == 'nightly'
-    needs: update-nightly-version-info
+    needs: upload-nightly-fw-to-release
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -227,7 +229,7 @@ jobs:
   update-nightly-release-info:
     name: Update Nightly Release Info
     if: inputs.build-type == 'nightly'
-    needs: [update-nightly-version-info, hubitat-bundle]
+    needs: [upload-nightly-fw-to-release, hubitat-bundle]
     runs-on: ubuntu-latest
     permissions:
       contents: write
