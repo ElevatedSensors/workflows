@@ -174,7 +174,7 @@ jobs:
 
       - name: Update manifest version
         run: |
-          NIGHTLY_VERSION="$(date -u +'%Y.%m.%d.%H%M')"
+          NIGHTLY_VERSION="$(TZ=America/Denver date +'%Y.%m.%d.%H%M')"
           MANIFEST_PATH="firmware-download/${{ inputs.product-name }}.manifest.json"
 
           if [ ! -f "$MANIFEST_PATH" ]; then
