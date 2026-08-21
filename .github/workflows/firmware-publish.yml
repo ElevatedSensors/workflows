@@ -85,7 +85,7 @@ jobs:
     name: Upload Release Firmware to Release
     if: inputs.build-type == 'release'
     needs: build-firmware
-    uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.4.1
+    uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.8.1
     with:
       version: ${{ github.event.release.tag_name }}
 
@@ -93,7 +93,7 @@ jobs:
     name: Upload Nightly Firmware to Release
     if: inputs.build-type == 'nightly'
     needs: [build-firmware, update-nightly-version-info]
-    uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.4.1
+    uses: esphome/workflows/.github/workflows/upload-to-gh-release.yml@2026.8.1
     with:
       version: nightly
 
