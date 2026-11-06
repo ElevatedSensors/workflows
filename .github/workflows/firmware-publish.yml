@@ -167,7 +167,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Detect Hubitat files
+        id: hubitat_files
+        run: |
+          BUNDLE_TXT="integrations/hubitat/bundles/${{ inputs.product-name }}.txt"
+          DRIVER="integrations/hubitat/drivers/${{ inputs.product-name }}.groovy"
+          if [ -f "$BUNDLE_TXT" ] && [ -f "$DRIVER" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No Hubitat bundle for ${{ inputs.product-name }}; skipping."
+          fi
+
       - name: Build bundle
+        if: steps.hubitat_files.outputs.present == 'true'
         run: |
           BUNDLE_DIR="${{ inputs.product-name }}-bundle"
           mkdir "$BUNDLE_DIR"
